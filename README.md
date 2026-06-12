@@ -1,4 +1,4 @@
-# 📊 Bajaj Executive Sales Intelligence Dashboard
+#  Bajaj Executive Sales Intelligence Dashboard
 
 A fully interactive, single-file HTML dashboard built for the **CEO and CFO of Bajaj**, providing deep insights into 4 years of US retail sales data (2018–2021).
 
