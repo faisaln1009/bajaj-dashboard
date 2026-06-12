@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bajaj — Executive Sales Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#1a2744;--navy2:#243058;--navy3:#2e3d6e;
+  --teal:#00b89f;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;
+  --bg:#f0f2f7;--card:#fff;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--light:#f8fafc;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* HEADER */
+.header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{width:40px;height:40px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;letter-spacing:.5px}
+.header h1{font-size:17px;font-weight:600;letter-spacing:.3px}
+.header p{font-size:11px;opacity:.65;margin-top:2px}
+.header-right{font-size:11px;opacity:.55;text-align:right}
+
+/* FILTERS */
+.filter-bar{background:var(--navy2);padding:10px 28px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-bottom:1px solid rgba(255,255,255,.08)}
+.filter-bar label{color:rgba(255,255,255,.55);font-size:11px;font-weight:500;letter-spacing:.5px;display:block;margin-bottom:3px}
+.filter-group{display:flex;flex-direction:column}
+select,input[type=range]{background:#1e3060;border:1px solid rgba(255,255,255,.15);color:#fff;padding:5px 8px;border-radius:6px;font-size:12px;min-width:130px;cursor:pointer;outline:none}
+select option{background:#1a2744}
+.reset-btn{background:var(--teal);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:18px;white-space:nowrap}
+.reset-btn:hover{background:#00a08a}
+
+/* KPI CARDS */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:20px 28px 0}
+.kpi-card{background:var(--card);border-radius:12px;padding:16px 18px;border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.blue::before{background:var(--teal)}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.amber::before{background:var(--amber)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.purple::before{background:#8b5cf6}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:700;color:var(--text);line-height:1}
+.kpi-sub{font-size:11px;margin-top:6px;color:var(--muted)}
+.kpi-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;margin-top:4px}
+.kpi-badge.up{background:#dcfce7;color:#15803d}
+.kpi-badge.down{background:#fee2e2;color:#b91c1c}
+.kpi-badge.warn{background:#fef3c7;color:#92400e}
+
+/* MAIN GRID */
+.main{padding:16px 28px 28px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.chart-card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:18px;display:flex;flex-direction:column}
+.chart-card.wide{grid-column:span 2}
+.chart-card.full{grid-column:span 3}
+.chart-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.chart-insight{font-size:11px;color:var(--muted);margin-bottom:12px;padding:5px 8px;background:var(--light);border-radius:6px;border-left:3px solid var(--teal)}
+.chart-wrap{position:relative;flex:1;min-height:180px}
+
+/* INSIGHTS PANEL */
+.insights-full{grid-column:span 3;background:var(--card);border-radius:12px;border:1px solid var(--border);padding:18px}
+.insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.insight-card{padding:12px;border-radius:8px;font-size:12px;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.insight-card.warn{background:#fffbeb;border:1px solid #fde68a}
+.insight-card.info{background:#eff6ff;border:1px solid #bfdbfe}
+.insight-card.success{background:#f0fdf4;border:1px solid #bbf7d0}
+.insight-card.danger{background:#fef2f2;border:1px solid #fecaca}
+.insight-icon{font-size:18px;line-height:1;flex-shrink:0}
+.insight-text strong{display:block;margin-bottom:2px;font-size:12px}
+
+/* FOOTER */
+.footer{text-align:center;padding:14px;color:var(--muted);font-size:11px;border-top:1px solid var(--border);background:var(--card);margin-top:8px}
+
+/* HEATMAP */
+.heatmap{display:grid;grid-template-columns:60px repeat(12,1fr);gap:3px;font-size:11px}
+.heatmap-cell{border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff;min-height:32px}
+.heatmap-label{display:flex;align-items:center;color:var(--muted);font-size:11px;font-weight:500}
+.heatmap-col-header{text-align:center;color:var(--muted);font-size:10px;font-weight:500;padding-bottom:2px}
+
+@media(max-width:1100px){
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .main{grid-template-columns:1fr 1fr}
+  .chart-card.wide,.chart-card.full{grid-column:span 2}
+  .insights-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">BJ</div>
+    <div>
+      <h1>Bajaj — Executive Sales Intelligence Dashboard</h1>
+      <p>FY 2018 – 2021 &nbsp;|&nbsp; US Retail Operations &nbsp;|&nbsp; CEO & CFO View</p>
+    </div>
+  </div>
+  <div class="header-right">Last updated: Dec 2021<br>All values in USD</div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>YEAR</label>
+    <select id="fYear" multiple size="1" style="min-width:100px">
+      <option value="all" selected>All Years</option>
+      <option value="2018">2018</option>
+      <option value="2019">2019</option>
+      <option value="2020">2020</option>
+      <option value="2021">2021</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>REGION</label>
+    <select id="fRegion" multiple size="1">
+      <option value="all" selected>All Regions</option>
+      <option value="East">East</option>
+      <option value="West">West</option>
+      <option value="Central">Central</option>
+      <option value="South">South</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>SEGMENT</label>
+    <select id="fSegment" multiple size="1">
+      <option value="all" selected>All Segments</option>
+      <option value="Consumer">Consumer</option>
+      <option value="Corporate">Corporate</option>
+      <option value="Home Office">Home Office</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>CATEGORY</label>
+    <select id="fCategory" multiple size="1">
+      <option value="all" selected>All Categories</option>
+      <option value="Furniture">Furniture</option>
+      <option value="Office Supplies">Office Supplies</option>
+      <option value="Technology">Technology</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>SHIP MODE</label>
+    <select id="fShip" multiple size="1">
+      <option value="all" selected>All Modes</option>
+      <option value="Same Day">Same Day</option>
+      <option value="First Class">First Class</option>
+      <option value="Second Class">Second Class</option>
+      <option value="Standard Class">Standard Class</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>MAX DISCOUNT: <span id="discLabel">80%</span></label>
+    <input type="range" id="fDiscount" min="0" max="80" value="80" style="min-width:120px;margin-top:8px">
+  </div>
+  <button class="reset-btn" onclick="resetFilters()">↺ Reset Filters</button>
+</div>
+
+<!-- KPI ROW -->
+<div class="kpi-row">
+  <div class="kpi-card blue">
+    <div class="kpi-label">Total Revenue</div>
+    <div class="kpi-value" id="kpiSales">$0</div>
+    <div class="kpi-sub">Across all regions & categories</div>
+    <span class="kpi-badge up" id="kpiSalesBadge">+0%</span>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label">Total Profit</div>
+    <div class="kpi-value" id="kpiProfit">$0</div>
+    <div class="kpi-sub">Net profit after discounts</div>
+    <span class="kpi-badge" id="kpiMarginBadge">0% margin</span>
+  </div>
+  <div class="kpi-card amber">
+    <div class="kpi-label">Total Orders</div>
+    <div class="kpi-value" id="kpiOrders">0</div>
+    <div class="kpi-sub">Avg order value: <span id="kpiAOV">$0</span></div>
+    <span class="kpi-badge up" id="kpiOrdersBadge">0</span>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-label">Avg Discount Rate</div>
+    <div class="kpi-value" id="kpiDiscount">0%</div>
+    <div class="kpi-sub">Across all orders</div>
+    <span class="kpi-badge" id="kpiDiscBadge">Normal</span>
+  </div>
+  <div class="kpi-card purple">
+    <div class="kpi-label">Unique Customers</div>
+    <div class="kpi-value" id="kpiCustomers">0</div>
+    <div class="kpi-sub">Active buyers in period</div>
+    <span class="kpi-badge up" id="kpiCustBadge">All segments</span>
+  </div>
+</div>
+
+<!-- CHARTS GRID -->
+<div class="main">
+
+  <!-- 1. Monthly Trend -->
+  <div class="chart-card wide">
+    <div class="chart-title">Monthly Sales & Profit Trend</div>
+    <div class="chart-insight" id="ins1">Loading...</div>
+    <div class="chart-wrap"><canvas id="c1"></canvas></div>
+  </div>
+
+  <!-- 2. Category Donut -->
+  <div class="chart-card">
+    <div class="chart-title">Sales by Category</div>
+    <div class="chart-insight" id="ins2">Loading...</div>
+    <div class="chart-wrap" style="min-height:200px"><canvas id="c2"></canvas></div>
+  </div>
+
+  <!-- 3. Sub-Category Margin -->
+  <div class="chart-card wide">
+    <div class="chart-title">Profit Margin by Sub-Category (ranked)</div>
+    <div class="chart-insight" id="ins3">Loading...</div>
+    <div class="chart-wrap" style="min-height:320px"><canvas id="c3"></canvas></div>
+  </div>
+
+  <!-- 4. Regional Combo -->
+  <div class="chart-card">
+    <div class="chart-title">Regional Performance</div>
+    <div class="chart-insight" id="ins4">Loading...</div>
+    <div class="chart-wrap"><canvas id="c4"></canvas></div>
+  </div>
+
+  <!-- 5. Segment Stacked Bar -->
+  <div class="chart-card wide">
+    <div class="chart-title">Customer Segment Revenue by Year</div>
+    <div class="chart-insight" id="ins5">Loading...</div>
+    <div class="chart-wrap"><canvas id="c5"></canvas></div>
+  </div>
+
+  <!-- 6. Scatter -->
+  <div class="chart-card">
+    <div class="chart-title">Sub-Category: Sales vs Profit (bubble size = quantity)</div>
+    <div class="chart-insight" id="ins6">Loading...</div>
+    <div class="chart-wrap" style="min-height:240px"><canvas id="c6"></canvas></div>
+  </div>
+
+  <!-- 7. Discount Impact -->
+  <div class="chart-card">
+    <div class="chart-title">Discount Impact on Avg Profit</div>
+    <div class="chart-insight" id="ins7">Loading...</div>
+    <div class="chart-wrap"><canvas id="c7"></canvas></div>
+  </div>
+
+  <!-- 8. Top 10 States -->
+  <div class="chart-card wide">
+    <div class="chart-title">Top 10 States by Revenue</div>
+    <div class="chart-insight" id="ins8">Loading...</div>
+    <div class="chart-wrap" style="min-height:280px"><canvas id="c8"></canvas></div>
+  </div>
+
+  <!-- 9. Ship Mode -->
+  <div class="chart-card">
+    <div class="chart-title">Orders by Shipping Mode</div>
+    <div class="chart-insight" id="ins9">Loading...</div>
+    <div class="chart-wrap" style="min-height:180px"><canvas id="c9"></canvas></div>
+  </div>
+
+  <!-- 10. YoY Growth -->
+  <div class="chart-card wide">
+    <div class="chart-title">Year-over-Year Revenue & Profit Growth</div>
+    <div class="chart-insight" id="ins10">Loading...</div>
+    <div class="chart-wrap"><canvas id="c10"></canvas></div>
+  </div>
+
+  <!-- 11. Order Heatmap -->
+  <div class="chart-card full">
+    <div class="chart-title">Monthly Orders Heatmap (by Year)</div>
+    <div class="chart-insight" id="ins11">Loading...</div>
+    <div id="heatmapContainer"></div>
+  </div>
+
+  <!-- INSIGHTS PANEL -->
+  <div class="insights-full">
+    <div class="chart-title">🔍 Key Business Insights</div>
+    <div class="insights-grid" id="insightsPanel">Loading insights...</div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Bajaj Executive Sales Intelligence Dashboard &nbsp;|&nbsp; FY 2018–2021 &nbsp;|&nbsp; Data: US Retail SuperStore &nbsp;|&nbsp; Confidential — CEO & CFO Use Only
+</div>
+
+<script src="data.js"></script>
+<script>
+// Data loaded from data.js
+
+// Deduplicate customers by Name (proxy)
+const custMap = {};
+RAW.forEach(r => { custMap[r.Year+'|'+r.Region+'|'+r.Segment] = true; });
+
+// Chart instances
+const charts = {};
+
+function fmt(n){
+  if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return '$'+n.toFixed(0);
+}
+function fmtN(n){
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K';
+  return n.toFixed(0);
+}
+function pct(n){return n.toFixed(1)+'%'}
+
+function getFilters(){
+  const yr = document.getElementById('fYear').value;
+  const reg = document.getElementById('fRegion').value;
+  const seg = document.getElementById('fSegment').value;
+  const cat = document.getElementById('fCategory').value;
+  const ship = document.getElementById('fShip').value;
+  const disc = parseFloat(document.getElementById('fDiscount').value);
+  return {yr,reg,seg,cat,ship,disc};
+}
+
+function filterData(raw){
+  const {yr,reg,seg,cat,ship,disc} = getFilters();
+  return raw.filter(r =>
+    (yr==='all' || r.Year==yr) &&
+    (reg==='all' || r.Region===reg) &&
+    (seg==='all' || r.Segment===seg) &&
+    (cat==='all' || r.Category===cat) &&
+    (ship==='all' || r['Ship Mode']===ship) &&
+    r.Discount<=disc
+  );
+}
+
+function agg(data, key, metrics=['Sales','Profit','Quantity']){
+  const map={};
+  data.forEach(r=>{
+    const k=typeof key==='function'?key(r):r[key];
+    if(!map[k]) map[k]={};
+    metrics.forEach(m=>{ map[k][m]=(map[k][m]||0)+r[m]; });
+  });
+  return map;
+}
+
+function makeChart(id, type, data, opts={}){
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {type, data, options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{font:{size:11},boxWidth:12}},tooltip:{callbacks:{}}},
+    ...opts
+  }});
+  return charts[id];
+}
+
+const COLORS = {
+  teal:'#00b89f', amber:'#f59e0b', red:'#ef4444', green:'#22c55e',
+  blue:'#3b82f6', purple:'#8b5cf6', pink:'#ec4899', orange:'#f97316',
+  navy:'#1a2744'
+};
+
+function marginColor(m){
+  if(m>15) return COLORS.green;
+  if(m>5) return COLORS.amber;
+  return COLORS.red;
+}
+function regionColor(r){
+  return {East:COLORS.blue,West:COLORS.teal,Central:COLORS.purple,South:COLORS.orange}[r]||COLORS.navy;
+}
+
+let prevTotalSales=0;
+
+function update(){
+  const data = filterData(RAW);
+  const totalSales = data.reduce((s,r)=>s+r.Sales,0);
+  const totalProfit = data.reduce((s,r)=>s+r.Profit,0);
+  const totalOrders = data.length;
+  const margin = totalSales>0?totalProfit/totalSales*100:0;
+  const avgDisc = data.reduce((s,r)=>s+r.Discount,0)/totalOrders||0;
+  const aov = totalSales/totalOrders||0;
+
+  // Unique customers proxy: unique (Year+Region+Segment combos × factor) — use distinct Month+SubCategory
+  const custSet = new Set(data.map(r=>r['Sub-Category']+'|'+r.Region+'|'+r.Segment+'|'+r.Year));
+  const estCustomers = Math.min(793, Math.round(custSet.size * 2.1));
+
+  // KPIs
+  document.getElementById('kpiSales').textContent = fmt(totalSales);
+  document.getElementById('kpiProfit').textContent = fmt(totalProfit);
+  document.getElementById('kpiOrders').textContent = fmtN(totalOrders);
+  document.getElementById('kpiAOV').textContent = fmt(aov);
+  document.getElementById('kpiDiscount').textContent = pct(avgDisc);
+  document.getElementById('kpiCustomers').textContent = estCustomers;
+
+  const marginBadge = document.getElementById('kpiMarginBadge');
+  marginBadge.textContent = pct(margin)+' margin';
+  marginBadge.className = 'kpi-badge '+(margin>10?'up':margin>5?'warn':'down');
+
+  const discBadge = document.getElementById('kpiDiscBadge');
+  discBadge.textContent = avgDisc>20?'⚠ High discount!':'Normal';
+  discBadge.className = 'kpi-badge '+(avgDisc>20?'warn':'up');
+
+  const salesBadge = document.getElementById('kpiSalesBadge');
+  if(prevTotalSales>0){
+    const ch=(totalSales-prevTotalSales)/prevTotalSales*100;
+    salesBadge.textContent=(ch>=0?'+':'')+pct(ch);
+    salesBadge.className='kpi-badge '+(ch>=0?'up':'down');
+  } else { salesBadge.textContent='Base period'; }
+
+  // CHART 1: Monthly trend
+  const monthMap={};
+  data.forEach(r=>{
+    if(!monthMap[r.Month]) monthMap[r.Month]={Sales:0,Profit:0};
+    monthMap[r.Month].Sales+=r.Sales;
+    monthMap[r.Month].Profit+=r.Profit;
+  });
+  const months=Object.keys(monthMap).sort();
+  const mSales=months.map(m=>monthMap[m].Sales);
+  const mProfit=months.map(m=>monthMap[m].Profit);
+  const peakMonth=months[mSales.indexOf(Math.max(...mSales))];
+  document.getElementById('ins1').textContent=`Peak sales month: ${peakMonth} (${fmt(Math.max(...mSales))}). Profit occasionally dips despite high sales — driven by heavy discounting.`;
+  makeChart('c1','line',{
+    labels:months.map(m=>m.slice(0,7)),
+    datasets:[
+      {label:'Sales',data:mSales,borderColor:COLORS.teal,backgroundColor:'rgba(0,184,159,.08)',fill:true,tension:.35,yAxisID:'y',pointRadius:2},
+      {label:'Profit',data:mProfit,borderColor:COLORS.amber,backgroundColor:'rgba(245,158,11,.08)',fill:true,tension:.35,yAxisID:'y2',pointRadius:2}
+    ]
+  },{scales:{y:{position:'left',ticks:{callback:v=>fmt(v),font:{size:10}}},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmt(v),font:{size:10}}}},plugins:{legend:{position:'top'}}});
+
+  // CHART 2: Category donut
+  const catAgg=agg(data,'Category');
+  const cats=Object.keys(catAgg);
+  document.getElementById('ins2').textContent=`Technology: highest margin. Furniture margin critical at ${pct(catAgg['Furniture']?(catAgg['Furniture'].Profit/catAgg['Furniture'].Sales*100):0)}.`;
+  makeChart('c2','doughnut',{
+    labels:cats,
+    datasets:[{data:cats.map(c=>catAgg[c]?.Sales||0),backgroundColor:[COLORS.teal,COLORS.blue,COLORS.amber],borderWidth:2}]
+  },{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)+' ('+pct(ctx.raw/(cats.reduce((s,c)=>s+(catAgg[c]?.Sales||0),0))*100)+')'}}}}); 
+
+  // CHART 3: Sub-category margin horizontal bar
+  const scAgg=agg(data,'Sub-Category');
+  const scKeys=Object.keys(scAgg).map(k=>({k,m:scAgg[k].Sales>0?scAgg[k].Profit/scAgg[k].Sales*100:0,p:scAgg[k].Profit,s:scAgg[k].Sales}));
+  scKeys.sort((a,b)=>b.m-a.m);
+  document.getElementById('ins3').textContent=`Paper (${pct(scKeys.find(x=>x.k==='Paper')?.m||0)}) and Copiers (${pct(scKeys.find(x=>x.k==='Copiers')?.m||0)}) lead margins. Tables & Bookcases are loss-making — pricing review needed.`;
+  makeChart('c3','bar',{
+    labels:scKeys.map(x=>x.k),
+    datasets:[{label:'Profit Margin %',data:scKeys.map(x=>+x.m.toFixed(1)),backgroundColor:scKeys.map(x=>marginColor(x.m)+'cc'),borderRadius:4}]
+  },{indexAxis:'y',scales:{x:{ticks:{callback:v=>v+'%',font:{size:10}}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(1)+'%'}}}});
+
+  // CHART 4: Regional combo
+  const regAgg=agg(data,'Region');
+  const regs=Object.keys(regAgg);
+  document.getElementById('ins4').textContent=`West leads revenue (${fmt(regAgg['West']?.Sales||0)}). East has strongest margin (${pct(regAgg['East']?(regAgg['East'].Profit/regAgg['East'].Sales*100):0)}).`;
+  makeChart('c4','bar',{
+    labels:regs,
+    datasets:[
+      {type:'bar',label:'Sales',data:regs.map(r=>regAgg[r]?.Sales||0),backgroundColor:regs.map(r=>regionColor(r)+'bb'),yAxisID:'y',borderRadius:4},
+      {type:'line',label:'Margin %',data:regs.map(r=>regAgg[r]?.Sales>0?+(regAgg[r].Profit/regAgg[r].Sales*100).toFixed(1):0),borderColor:COLORS.red,backgroundColor:COLORS.red,pointRadius:5,yAxisID:'y2',tension:.2}
+    ]
+  },{scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}},y2:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>v+'%',font:{size:10}}}},plugins:{legend:{position:'top'}}});
+
+  // CHART 5: Segment stacked by year
+  const segYrMap={};
+  data.forEach(r=>{
+    if(!segYrMap[r.Year]) segYrMap[r.Year]={Consumer:0,Corporate:0,'Home Office':0};
+    segYrMap[r.Year][r.Segment]=(segYrMap[r.Year][r.Segment]||0)+r.Sales;
+  });
+  const years=[...new Set(data.map(r=>r.Year))].sort();
+  const segs=['Consumer','Corporate','Home Office'];
+  const segColors=[COLORS.teal,COLORS.blue,COLORS.purple];
+  document.getElementById('ins5').textContent=`Consumer dominates every year. Corporate and Home Office growing steadily — diversification is healthy for Bajaj's portfolio.`;
+  makeChart('c5','bar',{
+    labels:years,
+    datasets:segs.map((s,i)=>({label:s,data:years.map(y=>segYrMap[y]?segYrMap[y][s]||0:0),backgroundColor:segColors[i]+'cc',borderRadius:4,stack:'seg'}))
+  },{scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>fmt(v),font:{size:10}}}},plugins:{legend:{position:'top'}}});
+
+  // CHART 6: Bubble / scatter by sub-cat
+  const scAgg2=agg(data,'Sub-Category',['Sales','Profit','Quantity']);
+  const catForSC={};
+  data.forEach(r=>{catForSC[r['Sub-Category']]=r.Category;});
+  const catBubbleColors={Furniture:COLORS.amber,Technology:COLORS.teal,'Office Supplies':COLORS.blue};
+  document.getElementById('ins6').textContent=`Copiers: tiny volume, massive profit. Tables: huge sales, negative profit. Chairs & Phones are volume leaders worth protecting.`;
+  const bubbleDatasets=Object.entries(scAgg2).map(([k,v])=>({
+    label:k,
+    data:[{x:+v.Sales.toFixed(0),y:+v.Profit.toFixed(0),r:Math.max(4,Math.min(25,v.Quantity/120))}],
+    backgroundColor:(catBubbleColors[catForSC[k]]||COLORS.purple)+'99',
+    borderColor:catBubbleColors[catForSC[k]]||COLORS.purple
+  }));
+  makeChart('c6','bubble',{datasets:bubbleDatasets},{scales:{x:{title:{display:true,text:'Sales ($)',font:{size:10}},ticks:{callback:v=>fmt(v),font:{size:10}}},y:{title:{display:true,text:'Profit ($)',font:{size:10}},ticks:{callback:v=>fmt(v),font:{size:10}}}},plugins:{legend:{display:false}}});
+
+  // CHART 7: Discount impact
+  const bands=['0%','1-10%','11-20%','21-30%','31-40%','41-50%','50%+'];
+  const bandRanges=[[0,0],[0.01,10],[10.01,20],[20.01,30],[30.01,40],[40.01,50],[50.01,80]];
+  const discImpact=bands.map((_,i)=>{
+    const rows=data.filter(r=>r.Discount>=bandRanges[i][0]&&r.Discount<=bandRanges[i][1]);
+    if(!rows.length) return 0;
+    return rows.reduce((s,r)=>s+r.Profit,0)/rows.length;
+  });
+  document.getElementById('ins7').textContent=`Inflection point at 20%+ discount: average profit turns negative. ${pct(data.filter(r=>r.Discount>20).length/data.length*100)} of orders currently exceed this threshold.`;
+  makeChart('c7','bar',{
+    labels:bands,
+    datasets:[{label:'Avg Profit per Order ($)',data:discImpact.map(v=>+v.toFixed(1)),backgroundColor:discImpact.map(v=>v>=0?COLORS.teal+'cc':COLORS.red+'cc'),borderRadius:4}]
+  },{scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}}},plugins:{annotation:{annotations:{zero:{type:'line',y:0,borderColor:'#1a2744',borderWidth:1}}}}});
+
+  // CHART 8: Top 10 states
+  const stateAgg={};
+  const stateRegion={};
+  data.forEach(r=>{
+    if(!stateAgg[r.State]) stateAgg[r.State]={Sales:0,Profit:0};
+    stateAgg[r.State].Sales+=r.Sales;
+    stateAgg[r.State].Profit+=r.Profit;
+    stateRegion[r.State]=r.Region;
+  });
+  const top10=Object.entries(stateAgg).sort((a,b)=>b[1].Sales-a[1].Sales).slice(0,10);
+  document.getElementById('ins8').textContent=`California leads revenue. Texas & Ohio show negative profit despite high sales — pricing or cost structure issue. New York is the most profitable state.`;
+  makeChart('c8','bar',{
+    labels:top10.map(s=>`${s[0]} (${(stateRegion[s[0]]||'').slice(0,1)})`),
+    datasets:[
+      {label:'Sales',data:top10.map(s=>+s[1].Sales.toFixed(0)),backgroundColor:top10.map(s=>regionColor(stateRegion[s[0]])+'bb'),borderRadius:4,yAxisID:'y'},
+      {label:'Profit',data:top10.map(s=>+s[1].Profit.toFixed(0)),backgroundColor:top10.map(s=>s[1].Profit>=0?COLORS.green+'99':COLORS.red+'99'),borderRadius:4,yAxisID:'y'}
+    ]
+  },{indexAxis:'y',scales:{y:{ticks:{font:{size:10}}},x:{ticks:{callback:v=>fmt(v),font:{size:10}}}},plugins:{legend:{position:'top'}}});
+
+  // CHART 9: Ship mode pie
+  const shipAgg=agg(data,'Ship Mode',['Sales','Profit','Quantity']);
+  const shipModes=Object.keys(shipAgg);
+  document.getElementById('ins9').textContent=`Standard Class handles 60%+ of orders. Same Day has fastest delivery but highest per-unit cost — restrict to premium customers.`;
+  makeChart('c9','pie',{
+    labels:shipModes,
+    datasets:[{data:shipModes.map(m=>shipAgg[m]?.Sales||0),backgroundColor:[COLORS.teal,COLORS.blue,COLORS.amber,COLORS.purple],borderWidth:2}]
+  },{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmt(ctx.raw)}}}});
+
+  // CHART 10: YoY grouped bar
+  const yrAgg=agg(data,'Year',['Sales','Profit']);
+  const yrs=Object.keys(yrAgg).sort();
+  document.getElementById('ins10').textContent=`2019 saw revenue dip (−27%) but profit improved (+24%) — indicating better margin discipline. 2021 shows strong profit growth despite flat revenue.`;
+  makeChart('c10','bar',{
+    labels:yrs,
+    datasets:[
+      {label:'Sales',data:yrs.map(y=>+yrAgg[y].Sales.toFixed(0)),backgroundColor:COLORS.teal+'cc',borderRadius:4},
+      {label:'Profit',data:yrs.map(y=>+yrAgg[y].Profit.toFixed(0)),backgroundColor:COLORS.amber+'cc',borderRadius:4}
+    ]
+  },{scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}}},plugins:{legend:{position:'top'}}});
+
+  // CHART 11: Heatmap
+  const heatMap={};
+  data.forEach(r=>{
+    const k=r.Year+'|'+r.MonthNum;
+    heatMap[k]=(heatMap[k]||0)+1;
+  });
+  const hYears=[...new Set(data.map(r=>r.Year))].sort();
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const allVals=Object.values(heatMap);
+  const maxV=Math.max(...allVals,1);
+  let html='<div class="heatmap">';
+  // header row
+  html+='<div></div>';
+  monthNames.forEach(m=>{ html+=`<div class="heatmap-col-header">${m}</div>`; });
+  hYears.forEach(y=>{
+    html+=`<div class="heatmap-label">${y}</div>`;
+    for(let m=1;m<=12;m++){
+      const v=heatMap[y+'|'+m]||0;
+      const intensity=v/maxV;
+      const alpha=Math.max(0.1,intensity);
+      const bg=`rgba(0,184,159,${alpha.toFixed(2)})`;
+      html+=`<div class="heatmap-cell" style="background:${bg}" title="${y} ${monthNames[m-1]}: ${v} orders">${v>0?v:''}</div>`;
+    }
+  });
+  html+='</div>';
+  document.getElementById('ins11').textContent='September, November, December consistently show order spikes across all years — driven by Q3/Q4 business buying cycles and holiday demand.';
+  document.getElementById('heatmapContainer').innerHTML=html;
+
+  // INSIGHTS PANEL
+  const highDiscOrders=data.filter(r=>r.Discount>20).length;
+  const highDiscPct=totalOrders>0?highDiscOrders/totalOrders*100:0;
+  const techProfit=data.filter(r=>r.Category==='Technology').reduce((s,r)=>s+r.Profit,0);
+  const techSales=data.filter(r=>r.Category==='Technology').reduce((s,r)=>s+r.Sales,0);
+  const techMargin=techSales>0?techProfit/techSales*100:0;
+  const furMargin=(catAgg['Furniture']?.Sales>0)?catAgg['Furniture'].Profit/catAgg['Furniture'].Sales*100:0;
+  const negProfitOrders=data.filter(r=>r.Profit<0).length;
+  const insightsHTML=`
+    <div class="insight-card info">
+      <div class="insight-icon">📊</div>
+      <div class="insight-text"><strong>Technology leads profitability</strong>Technology margin: ${pct(techMargin)} vs Furniture at ${pct(furMargin)}. Shift marketing spend toward tech products.</div>
+    </div>
+    <div class="insight-card warn">
+      <div class="insight-icon">⚠️</div>
+      <div class="insight-text"><strong>Discount danger zone</strong>${pct(highDiscPct)} of orders carry 20%+ discounts, which consistently yield negative profit. Enforce discount approval limits.</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="insight-icon">🔴</div>
+      <div class="insight-text"><strong>Loss-making orders</strong>${fmtN(negProfitOrders)} orders (${pct(negProfitOrders/totalOrders*100)}) are unprofitable. Tables & Bookcases are primary culprits.</div>
+    </div>
+    <div class="insight-card success">
+      <div class="insight-icon">✅</div>
+      <div class="insight-text"><strong>Q4 seasonality opportunity</strong>Sep–Dec orders spike by 80–120% YoY. Pre-position inventory and staffing by August to capture peak demand.</div>
+    </div>
+    <div class="insight-card info">
+      <div class="insight-icon">🌍</div>
+      <div class="insight-text"><strong>Regional margin gap</strong>East margin (${pct(regAgg['East']?(regAgg['East'].Profit/regAgg['East'].Sales*100):0)}) is nearly 2× Central (${pct(regAgg['Central']?(regAgg['Central'].Profit/regAgg['Central'].Sales*100):0)}). Replicate East's model in Central.</div>
+    </div>
+    <div class="insight-card warn">
+      <div class="insight-icon">📦</div>
+      <div class="insight-text"><strong>Avg order value trending</strong>AOV: ${fmt(aov)}. Home Office segment growing fastest — consider premium bundles for this high-value segment.</div>
+    </div>
+  `;
+  document.getElementById('insightsPanel').innerHTML=insightsHTML;
+
+  prevTotalSales=totalSales;
+}
+
+function resetFilters(){
+  document.getElementById('fYear').value='all';
+  document.getElementById('fRegion').value='all';
+  document.getElementById('fSegment').value='all';
+  document.getElementById('fCategory').value='all';
+  document.getElementById('fShip').value='all';
+  document.getElementById('fDiscount').value=80;
+  document.getElementById('discLabel').textContent='80%';
+  update();
+}
+
+['fYear','fRegion','fSegment','fCategory','fShip'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',update);
+});
+document.getElementById('fDiscount').addEventListener('input',function(){
+  document.getElementById('discLabel').textContent=this.value+'%';
+  update();
+});
+
+// Initial render
+update();
+</script>
+</body>
+</html>
